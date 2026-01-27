@@ -55,9 +55,13 @@ class SollumType(str, Enum):
     YMAP_BOX_OCCLUDER_GROUP = "sollumz_ymap_box_occluder_group"
     YMAP_MODEL_OCCLUDER_GROUP = "sollumz_ymap_model_occluder_group"
     YMAP_CAR_GENERATOR_GROUP = "sollumz_ymap_car_generator_group"
+    YMAP_ENTITY = "sollumz_ymap_entity"
     YMAP_BOX_OCCLUDER = "sollumz_ymap_box_occluder"
     YMAP_MODEL_OCCLUDER = "sollumz_ymap_model_occluder"
     YMAP_CAR_GENERATOR = "sollumz_ymap_car_generator"
+    YMAP_GRASS_GROUP = "sollumz_ymap_grass_group"
+    YMAP_GRASS_BATCH = "sollumz_ymap_grass_batch"
+    YMAP_GRASS_INSTANCE = "sollumz_ymap_grass_instance"
 
     CHARACTER_CLOTH_MESH = "sollumz_character_cloth_mesh"
 
@@ -261,9 +265,13 @@ YMAP_GROUP_TYPES = [
     SollumType.YMAP_BOX_OCCLUDER_GROUP,
     SollumType.YMAP_MODEL_OCCLUDER_GROUP,
     SollumType.YMAP_CAR_GENERATOR_GROUP,
+    SollumType.YMAP_GRASS_GROUP,
+    SollumType.YMAP_ENTITY,
     SollumType.YMAP_BOX_OCCLUDER,
     SollumType.YMAP_MODEL_OCCLUDER,
     SollumType.YMAP_CAR_GENERATOR,
+    SollumType.YMAP_GRASS_BATCH,
+    SollumType.YMAP_GRASS_INSTANCE,
 ]
 
 
@@ -315,9 +323,13 @@ SOLLUMZ_UI_NAMES = {
     SollumType.YMAP_BOX_OCCLUDER_GROUP: "Box Occluder Group",
     SollumType.YMAP_MODEL_OCCLUDER_GROUP: "Model Occluder Group",
     SollumType.YMAP_CAR_GENERATOR_GROUP: "Car Generator Group",
+    SollumType.YMAP_ENTITY: "Ymap Entity",
     SollumType.YMAP_BOX_OCCLUDER: "Box Occluder",
     SollumType.YMAP_MODEL_OCCLUDER: "Model Occluder",
     SollumType.YMAP_CAR_GENERATOR: "Car Generator",
+    SollumType.YMAP_GRASS_GROUP: "Grass Group",
+    SollumType.YMAP_GRASS_BATCH: "Grass Batch",
+    SollumType.YMAP_GRASS_INSTANCE: "Grass Instance",
 
     MaterialType.NONE: "None",
     MaterialType.SHADER: "Sollumz Material",
@@ -487,11 +499,94 @@ class TimeFlagsMixin(FlagPropertyGroup):
     time_flags_end: bpy.props.EnumProperty(items=time_items, name="Time End")
 
 
+class EntityFlags(FlagPropertyGroup, bpy.types.PropertyGroup):
+    size = 32
+    flag_names = [f"flag{i+1}" for i in range(32)]
+
+    flag1: bpy.props.BoolProperty(
+        name="Allow Full Rotation", update=FlagPropertyGroup.update_flag)
+    flag2: bpy.props.BoolProperty(
+        name="Unk 2", update=FlagPropertyGroup.update_flag)
+    flag3: bpy.props.BoolProperty(
+        name="Disable Embedded Collision", update=FlagPropertyGroup.update_flag)
+    flag4: bpy.props.BoolProperty(
+        name="LOD In Parent", update=FlagPropertyGroup.update_flag)
+    flag5: bpy.props.BoolProperty(
+        name="Unk 5", update=FlagPropertyGroup.update_flag)
+    flag6: bpy.props.BoolProperty(
+        name="Static Entity", update=FlagPropertyGroup.update_flag)
+    flag7: bpy.props.BoolProperty(
+        name="Has Gravity", update=FlagPropertyGroup.update_flag)
+    flag8: bpy.props.BoolProperty(
+        name="Unk 8", update=FlagPropertyGroup.update_flag)
+    flag9: bpy.props.BoolProperty(
+        name="Unk 9", update=FlagPropertyGroup.update_flag)
+    flag10: bpy.props.BoolProperty(
+        name="Unk 10", update=FlagPropertyGroup.update_flag)
+    flag11: bpy.props.BoolProperty(
+        name="Unk 11", update=FlagPropertyGroup.update_flag)
+    flag12: bpy.props.BoolProperty(
+        name="Unk 12", update=FlagPropertyGroup.update_flag)
+    flag13: bpy.props.BoolProperty(
+        name="Unk 13", update=FlagPropertyGroup.update_flag)
+    flag14: bpy.props.BoolProperty(
+        name="Unk 14", update=FlagPropertyGroup.update_flag)
+    flag15: bpy.props.BoolProperty(
+        name="Unk 15", update=FlagPropertyGroup.update_flag)
+    flag16: bpy.props.BoolProperty(
+        name="Unk 16", update=FlagPropertyGroup.update_flag)
+    flag17: bpy.props.BoolProperty(
+        name="Unk 17", update=FlagPropertyGroup.update_flag)
+    flag18: bpy.props.BoolProperty(
+        name="Unk 18", update=FlagPropertyGroup.update_flag)
+    flag19: bpy.props.BoolProperty(
+        name="Unk 19", update=FlagPropertyGroup.update_flag)
+    flag20: bpy.props.BoolProperty(
+        name="Unk 20", update=FlagPropertyGroup.update_flag)
+    flag21: bpy.props.BoolProperty(
+        name="Unk 21", update=FlagPropertyGroup.update_flag)
+    flag22: bpy.props.BoolProperty(
+        name="Unk 22", update=FlagPropertyGroup.update_flag)
+    flag23: bpy.props.BoolProperty(
+        name="Unk 23", update=FlagPropertyGroup.update_flag)
+    flag24: bpy.props.BoolProperty(
+        name="Unk 24", update=FlagPropertyGroup.update_flag)
+    flag25: bpy.props.BoolProperty(
+        name="Unk 25", update=FlagPropertyGroup.update_flag)
+    flag26: bpy.props.BoolProperty(
+        name="Unk 26", update=FlagPropertyGroup.update_flag)
+    flag27: bpy.props.BoolProperty(
+        name="Unk 27", update=FlagPropertyGroup.update_flag)
+    flag28: bpy.props.BoolProperty(
+        name="Unk 28", update=FlagPropertyGroup.update_flag)
+    flag29: bpy.props.BoolProperty(
+        name="Unk 29", update=FlagPropertyGroup.update_flag)
+    flag30: bpy.props.BoolProperty(
+        name="Unk 30", update=FlagPropertyGroup.update_flag)
+    flag31: bpy.props.BoolProperty(
+        name="Unk 31", update=FlagPropertyGroup.update_flag)
+    flag32: bpy.props.BoolProperty(
+        name="Unk 32", update=FlagPropertyGroup.update_flag)
+
+
 class EntityProperties:
+    def get_flags(self):
+        return int(self.flags_toggle.total)
+
+    def set_flags(self, value):
+        self.flags_toggle.total = str(value)
+        self.flags_toggle.update_flags_total(None)
+
     archetype_name: bpy.props.StringProperty(name="Archetype Name")
-    flags: bpy.props.IntProperty(name="Flags", default=32)
+    flags: bpy.props.IntProperty(
+        name="Flags", default=32, get=get_flags, set=set_flags)
+    flags_toggle: bpy.props.PointerProperty(type=EntityFlags)
     guid: bpy.props.FloatProperty(name="GUID")
     parent_index: bpy.props.IntProperty(name="Parent Index", default=-1)
+    
+    # Advanced Parent Linking
+    parent_entity: bpy.props.PointerProperty(type=bpy.types.Object, name="Parent")
+
     lod_dist: bpy.props.FloatProperty(name="Lod Distance", default=200)
     child_lod_dist: bpy.props.FloatProperty(name="Child Lod Distance")
     lod_level: bpy.props.EnumProperty(

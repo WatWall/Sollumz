@@ -239,7 +239,28 @@ def generate_ymap_extents(selected_ymap=None):
                     smin = Vector(min(smin[i], sbmin[i]) for i in range(3))
                     smax = Vector(max(smax[i], sbmax[i]) for i in range(3))
 
-        # TODO: grass
+        # Grass instances
+        elif child.sollum_type == SollumType.YMAP_GRASS_GROUP:
+            for batch_obj in child.children:
+                if batch_obj.sollum_type == SollumType.YMAP_GRASS_BATCH:
+                    lod_dist = batch_obj.ymap_grass_batch_properties.lod_dist
+                    for grass_inst in batch_obj.children:
+                        if grass_inst.sollum_type == SollumType.YMAP_GRASS_INSTANCE:
+                            position = grass_inst.matrix_world.translation
+                            # Small size for grass instances
+                            size = Vector((0.5, 0.5, 0.5))
+                            
+                            bbmin = position - size
+                            bbmax = position + size
+                            
+                            emin = Vector(min(emin[i], bbmin[i]) for i in range(3))
+                            emax = Vector(max(emax[i], bbmax[i]) for i in range(3))
+                            
+                            sbmin = position - size - Vector((lod_dist, lod_dist, lod_dist))
+                            sbmax = position + size + Vector((lod_dist, lod_dist, lod_dist))
+                            
+                            smin = Vector(min(smin[i], sbmin[i]) for i in range(3))
+                            smax = Vector(max(smax[i], sbmax[i]) for i in range(3))
 
         # TODO: lod lights
 

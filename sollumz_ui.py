@@ -500,16 +500,18 @@ class SOLLUMZ_PT_ENTITY_PANEL(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         aobj = context.active_object
-        return aobj is not None and aobj.sollum_type == SollumType.DRAWABLE
+        return aobj is not None and aobj.sollum_type == SollumType.YMAP_ENTITY
 
     def draw(self, context):
         layout = self.layout
-        grid = layout.grid_flow(columns=2, even_columns=True, even_rows=True)
-        grid.use_property_split = True
+        layout.use_property_split = True
         aobj = context.active_object
+
+        grid = layout.grid_flow(columns=2, even_columns=True, even_rows=True)
         grid.prop(aobj.entity_properties, "flags")
         grid.prop(aobj.entity_properties, "guid")
         grid.prop(aobj.entity_properties, "parent_index")
+        grid.prop(aobj.entity_properties, "parent_entity")
         grid.prop(aobj.entity_properties, "lod_dist")
         grid.prop(aobj.entity_properties, "child_lod_dist")
         grid.prop(aobj.entity_properties, "num_children")
@@ -518,6 +520,13 @@ class SOLLUMZ_PT_ENTITY_PANEL(bpy.types.Panel):
         grid.prop(aobj.entity_properties, "tint_value")
         grid.prop(aobj.entity_properties, "lod_level")
         grid.prop(aobj.entity_properties, "priority_level")
+
+        layout.separator()
+        layout.label(text="Entity Flags")
+        box = layout.box()
+        flags_grid = box.grid_flow(columns=2, even_columns=True, even_rows=True)
+        for i in range(32):
+            flags_grid.prop(aobj.entity_properties.flags_toggle, f"flag{i+1}")
 
 
 class SOLLUMZ_PT_MAT_PANEL(bpy.types.Panel):

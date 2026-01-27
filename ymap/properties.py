@@ -98,6 +98,7 @@ class YmapBlockProperties(bpy.types.PropertyGroup):
 
 class YmapProperties(bpy.types.PropertyGroup):
     parent: StringProperty(name="Parent", default="")
+    parent_ymap: bpy.props.PointerProperty(type=bpy.types.Object, name="Parent Yimap")
     flags: IntProperty(name="Flags", default=0, min=0, max=3,
                        update=FlagPropertyGroup.update_flags_total)
     content_flags: IntProperty(name="Content Flags", default=0, min=0, max=(
@@ -144,15 +145,71 @@ class YmapCarGeneratorProperties(bpy.types.PropertyGroup):
     livery: IntProperty(name="Livery", default=-1)
 
 
+class YmapGrassBatchProperties(bpy.types.PropertyGroup):
+    """Properties for a grass batch (GrassInstanceList item)"""
+    archetype_name: StringProperty(name="Archetype Name", default="proc_grasses01")
+    lod_dist: FloatProperty(name="LOD Distance", default=120.0)
+    lod_fade_start_dist: FloatProperty(name="LOD Fade Start Dist", default=15.0)
+    lod_inst_fade_range: FloatProperty(name="LOD Inst Fade Range", default=0.75)
+    orient_to_terrain: FloatProperty(name="Orient To Terrain", default=1.0)
+    scale_range: FloatVectorProperty(name="Scale Range", default=(0.3, 0.2, 0.7), size=3)
+
+
+def update_grass_instance_color(self, context):
+    """Sync grass instance color with viewport display color"""
+    obj = context.object
+    if obj is not None:
+        color = self.color
+        obj.color = (color[0], color[1], color[2], 1.0)
+
+
+class YmapGrassInstanceProperties(bpy.types.PropertyGroup):
+    """Properties for an individual grass instance"""
+    color: FloatVectorProperty(
+        name="Color",
+        subtype="COLOR",
+        default=(0.4, 0.7, 0.2),  # Green color
+        min=0.0, max=1.0,
+        size=3,
+        description="Grass instance color (RGB)",
+        update=update_grass_instance_color
+    )
+    ao: FloatProperty(name="Ambient Occlusion", default=1.0, min=0.0, max=1.0, description="Ambient occlusion value (0-1)")
+
+
+class YmapGrassPaintToolProperties(bpy.types.PropertyGroup):
+    """Properties for the grass paint tool"""
+    brush_radius: FloatProperty(name="Brush Radius", default=2.0, min=0.1, max=50.0)
+    density: FloatProperty(name="Density", default=0.5, min=0.1, max=10.0, description="Grass instances per square unit")
+    color: FloatVectorProperty(
+        name="Grass Color", 
+        subtype='COLOR', 
+        default=(0.4, 0.7, 0.2), 
+        min=0.0, max=1.0, 
+        size=3
+    )
+    target_object: PointerProperty(type=bpy.types.Object, name="Target Object", description="Object to paint on (leave empty to paint on all visible surfaces)")
+    color_variance: FloatProperty(name="Color Variance", default=0.2, min=0.0, max=1.0, description="Random variation in grass color (Hue and Brightness)")
+
+
 def register():
     bpy.types.Object.ymap_properties = PointerProperty(type=YmapProperties)
     bpy.types.Object.ymap_model_occl_properties = PointerProperty(
         type=YmapModelOccluderProperties)
     bpy.types.Object.ymap_cargen_properties = PointerProperty(
         type=YmapCarGeneratorProperties)
+    bpy.types.Object.ymap_grass_batch_properties = PointerProperty(
+        type=YmapGrassBatchProperties)
+    bpy.types.Object.ymap_grass_instance_properties = PointerProperty(
+        type=YmapGrassInstanceProperties)
+    bpy.types.Scene.ymap_grass_paint_tool_properties = PointerProperty(type=YmapGrassPaintToolProperties)
 
 
 def unregister():
     del bpy.types.Object.ymap_properties
     del bpy.types.Object.ymap_model_occl_properties
     del bpy.types.Object.ymap_cargen_properties
+    del bpy.types.Object.ymap_grass_batch_properties
+    del bpy.types.Object.ymap_grass_instance_properties
+    del bpy.types.Scene.ymap_grass_paint_tool_properties
+

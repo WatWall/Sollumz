@@ -11,6 +11,7 @@ def draw_ymap_properties(self, context):
         layout.use_property_split = True
         layout.use_property_decorate = False
         layout.prop(obj.ymap_properties, "parent")
+        layout.prop(obj.ymap_properties, "parent_ymap")
 
         layout.label(text="Map Flags")
         layout.prop(obj.ymap_properties, "flags")
@@ -43,15 +44,6 @@ def draw_ymap_properties(self, context):
         row = layout.row()
         row.prop(obj.ymap_properties.content_flags_toggle,
                  "has_grass", toggle=1)
-
-        layout.label(text="Extents")
-        layout.prop(obj.ymap_properties, "entities_extents_min")
-        layout.prop(obj.ymap_properties, "entities_extents_max")
-        layout.prop(obj.ymap_properties, "streaming_extents_min")
-        layout.prop(obj.ymap_properties, "streaming_extents_max")
-
-        layout.separator()
-        layout.operator("sollumz.generate_ymap_extents", icon="FILE_REFRESH")
 
 
 
@@ -105,6 +97,9 @@ class SOLLUMZ_PT_YMAP_TOOL_PANEL(bpy.types.Panel):
                 layout.operator("sollumz.create_model_occluder_group")
                 layout.operator("sollumz.create_box_occluder_group")
                 layout.operator("sollumz.create_car_generator_group")
+                layout.operator("sollumz.create_grass_group")
+                layout.separator()
+                layout.operator("sollumz.convert_to_ymap_entity", text="Update Entity Types", icon="FILE_REFRESH")
             elif active_object.sollum_type == SollumType.YMAP_BOX_OCCLUDER_GROUP:
                 layout.label(text="Box Occluders Options")
                 row = layout.row()
@@ -117,6 +112,28 @@ class SOLLUMZ_PT_YMAP_TOOL_PANEL(bpy.types.Panel):
                 layout.label(text="Car Generators Options")
                 row = layout.row()
                 row.operator("sollumz.create_car_generator")
+            elif active_object.sollum_type == SollumType.YMAP_GRASS_GROUP:
+                layout.label(text="Grass Options")
+                row = layout.row()
+                row.operator("sollumz.create_grass_batch")
+            elif active_object.sollum_type == SollumType.YMAP_GRASS_BATCH:
+                layout.label(text="Grass Batch Options")
+                row = layout.row()
+                row.operator("sollumz.create_grass_instance")
+                row = layout.row()
+                row.operator("sollumz.paint_grass", icon="BRUSH_DATA")
+                row = layout.row()
+                row.operator("sollumz.paint_grass_color", icon="BRUSH_DATA", text="Paint Color")
+                
+                # Grass Paint Settings
+                box = layout.box()
+                box.label(text="Paint Settings")
+                settings = context.scene.ymap_grass_paint_tool_properties
+                box.prop(settings, "brush_radius")
+                box.prop(settings, "density")
+                box.prop(settings, "color")
+                box.prop(settings, "color_variance")
+                box.prop(settings, "target_object")
 
         else:
             layout.label(text="No Ymap Selected")
@@ -149,13 +166,45 @@ class OBJECT_PT_ymap_block(bpy.types.Panel):
             layout.prop(obj.ymap_properties.block, "time")
 
 
+def draw_ymap_grass_batch_properties(self, context):
+    obj = context.active_object
+    if obj and obj.sollum_type == SollumType.YMAP_GRASS_BATCH:
+        layout = self.layout
+        layout.separator()
+        layout.label(text="Grass Batch Properties")
+        layout.prop(obj.ymap_grass_batch_properties, 'archetype_name')
+        layout.prop(obj.ymap_grass_batch_properties, 'lod_dist')
+        layout.prop(obj.ymap_grass_batch_properties, 'lod_fade_start_dist')
+        layout.prop(obj.ymap_grass_batch_properties, 'lod_inst_fade_range')
+        layout.prop(obj.ymap_grass_batch_properties, 'orient_to_terrain')
+        layout.prop(obj.ymap_grass_batch_properties, 'scale_range')
+
+
+def draw_ymap_grass_instance_properties(self, context):
+    obj = context.active_object
+    if obj and obj.sollum_type == SollumType.YMAP_GRASS_INSTANCE:
+        layout = self.layout
+        layout.separator()
+        layout.label(text="Grass Instance Properties")
+        layout.prop(obj.ymap_grass_instance_properties, 'color')
+        layout.prop(obj.ymap_grass_instance_properties, 'scale')
+        layout.prop(obj.ymap_grass_instance_properties, 'ao')
+        layout.prop(obj.ymap_grass_instance_properties, 'normal_x')
+        layout.prop(obj.ymap_grass_instance_properties, 'normal_y')
+
+
 def register():
     SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_properties)
     SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_model_occluder_properties)
     SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_car_generator_properties)
+    SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_grass_batch_properties)
+    SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_grass_instance_properties)
 
 
 def unregister():
     SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_properties)
     SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_model_occluder_properties)
     SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_car_generator_properties)
+    SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_grass_batch_properties)
+    SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_grass_instance_properties)
+

@@ -217,12 +217,15 @@ class VertexBufferBuilder:
     def _structured_array_from_attrs(self, mesh_attrs: dict[str, NDArray]):
         """Combine ``mesh_attrs`` into single structured array."""
         # Data type for vertex data structured array
-        struct_dtype = [STANDARD_VERTEX_ATTR_DTYPES[attr_name] for attr_name in mesh_attrs]
+        struct_dtype_list = [STANDARD_VERTEX_ATTR_DTYPES[attr_name] for attr_name in mesh_attrs]
+        struct_dtype = np.dtype(struct_dtype_list)
 
         if self.domain == VBBuilderDomain.FACE_CORNER:
-            vertex_arr = np.empty(len(self.mesh.loops), dtype=struct_dtype)
+            num_elements = len(self.mesh.loops)
         elif self.domain == VBBuilderDomain.VERTEX:
-            vertex_arr = np.empty(len(self.mesh.vertices), dtype=struct_dtype)
+            num_elements = len(self.mesh.vertices)
+        
+        vertex_arr = np.empty(num_elements, dtype=struct_dtype)
 
         for attr_name, arr in mesh_attrs.items():
             vertex_arr[attr_name] = arr
