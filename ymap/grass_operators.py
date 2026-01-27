@@ -296,7 +296,7 @@ class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
     bl_idname = "sollumz.paint_grass"
     bl_label = "Paint Grass"
     bl_description = "Paint grass instances. LMB: Paint, Ctrl+LMB: Erase, Scroll: Size, Ctrl+Scroll: Density"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'REGISTER'}
     
     _batch_obj = None
     _target_objects = []
@@ -307,6 +307,8 @@ class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
     _cached_brush_location = None
     _cached_brush_normal = None
     _last_cache_mouse_pos = None
+    _mesh_modified = False
+    _undo_pushed = False
     
     @property
     def settings(self):
@@ -323,6 +325,10 @@ class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
             return {'CANCELLED'}
         
         self._batch_obj = context.active_object
+        
+        # Reset state flags
+        self._mesh_modified = False
+        self._undo_pushed = False
         
         # Ensure batch has mesh data
         if self._batch_obj.data is None:
@@ -646,6 +652,11 @@ class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
         
         self._last_paint_pos = location
         
+        # Push undo step BEFORE first modification to create a valid restore point
+        if not self._undo_pushed:
+            bpy.ops.ed.undo_push(message="Grass Paint")
+            self._undo_pushed = True
+        
         # Calculate count
         area = math.pi * self.settings.brush_radius ** 2
         count = max(1, int(area * self.settings.density))
@@ -743,6 +754,11 @@ class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
         
         if not location:
             return
+
+        # Push undo step BEFORE first modification
+        if not self._undo_pushed:
+            bpy.ops.ed.undo_push(message="Grass Paint")
+            self._undo_pushed = True
 
         # Transform to local space
         sq_radius = self.settings.brush_radius * self.settings.brush_radius
