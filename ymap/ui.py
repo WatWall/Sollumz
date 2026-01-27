@@ -119,8 +119,6 @@ class SOLLUMZ_PT_YMAP_TOOL_PANEL(bpy.types.Panel):
             elif active_object.sollum_type == SollumType.YMAP_GRASS_BATCH:
                 layout.label(text="Grass Batch Options")
                 row = layout.row()
-                row.operator("sollumz.create_grass_instance")
-                row = layout.row()
                 row.operator("sollumz.paint_grass", icon="BRUSH_DATA")
                 row = layout.row()
                 row.operator("sollumz.paint_grass_color", icon="BRUSH_DATA", text="Paint Color")
@@ -131,7 +129,9 @@ class SOLLUMZ_PT_YMAP_TOOL_PANEL(bpy.types.Panel):
                 settings = context.scene.ymap_grass_paint_tool_properties
                 box.prop(settings, "brush_radius")
                 box.prop(settings, "density")
-                box.prop(settings, "color")
+                row = box.row()
+                row.prop(settings, "color")
+                row.prop(settings, "use_surface_color", text="", icon='EYEDROPPER')
                 box.prop(settings, "color_variance")
                 box.prop(settings, "target_object")
 
@@ -180,17 +180,7 @@ def draw_ymap_grass_batch_properties(self, context):
         layout.prop(obj.ymap_grass_batch_properties, 'scale_range')
 
 
-def draw_ymap_grass_instance_properties(self, context):
-    obj = context.active_object
-    if obj and obj.sollum_type == SollumType.YMAP_GRASS_INSTANCE:
-        layout = self.layout
-        layout.separator()
-        layout.label(text="Grass Instance Properties")
-        layout.prop(obj.ymap_grass_instance_properties, 'color')
-        layout.prop(obj.ymap_grass_instance_properties, 'scale')
-        layout.prop(obj.ymap_grass_instance_properties, 'ao')
-        layout.prop(obj.ymap_grass_instance_properties, 'normal_x')
-        layout.prop(obj.ymap_grass_instance_properties, 'normal_y')
+
 
 
 def register():
@@ -198,7 +188,6 @@ def register():
     SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_model_occluder_properties)
     SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_car_generator_properties)
     SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_grass_batch_properties)
-    SOLLUMZ_PT_OBJECT_PANEL.append(draw_ymap_grass_instance_properties)
 
 
 def unregister():
@@ -206,5 +195,4 @@ def unregister():
     SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_model_occluder_properties)
     SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_car_generator_properties)
     SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_grass_batch_properties)
-    SOLLUMZ_PT_OBJECT_PANEL.remove(draw_ymap_grass_instance_properties)
 

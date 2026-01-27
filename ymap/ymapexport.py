@@ -238,7 +238,7 @@ def calculate_cargen_orient(obj):
 
 
 def grass_batches_from_obj(ymap, grass_group_obj):
-    """Export grass batches from the Grass Group"""
+    """Export grass batches from the Grass Group - reads vertices with attributes from geometry nodes mesh"""
     from szio.gta5.cwxml.ymap import GrassInstanceList, GrassInstance, AABB, InstancedData
     from szio.types import Vector as SzVector
     
@@ -246,17 +246,29 @@ def grass_batches_from_obj(ymap, grass_group_obj):
         if batch_obj.sollum_type != SollumType.YMAP_GRASS_BATCH:
             continue
         
-        # Collect all grass instance positions for AABB calculation
-        instance_positions = []
-        for grass_inst in batch_obj.children:
-            if grass_inst.sollum_type == SollumType.YMAP_GRASS_INSTANCE:
-                # Get world position
-                world_pos = grass_inst.matrix_world.translation
-                instance_positions.append(world_pos)
-        
-        if not instance_positions:
-            logger.warning(f"Grass batch '{batch_obj.name}' has no instances, skipping.")
+        # Check if batch has mesh data
+        if batch_obj.data is None or not isinstance(batch_obj.data, bpy.types.Mesh):
+            logger.warning(f"Grass batch '{batch_obj.name}' has no mesh data, skipping.")
             continue
+        
+        mesh = batch_obj.data
+        
+        # Check if mesh has vertices
+        if len(mesh.vertices) == 0:
+            logger.warning(f"Grass batch '{batch_obj.name}' has no grass instances (vertices), skipping.")
+            continue
+        
+        # Get custom attributes
+        color_attr = mesh.attributes.get("grass_color")
+        scale_attr = mesh.attributes.get("grass_scale")
+        rotation_attr = mesh.attributes.get("grass_rotation")
+        ao_attr = mesh.attributes.get("grass_ao")
+        
+        # Collect all grass instance positions for AABB calculation (in world space)
+        instance_positions = []
+        for vert in mesh.vertices:
+            world_pos = batch_obj.matrix_world @ vert.co
+            instance_positions.append(world_pos)
         
         # Calculate BatchAABB from all instance positions
         xs = [p.x for p in instance_positions]
@@ -284,12 +296,9 @@ def grass_batches_from_obj(ymap, grass_group_obj):
         grass_batch.orient_to_terrain = props.orient_to_terrain
         grass_batch.scale_range = SzVector((props.scale_range[0], props.scale_range[1], props.scale_range[2]))
         
-        # Export individual grass instances
-        for grass_inst in batch_obj.children:
-            if grass_inst.sollum_type != SollumType.YMAP_GRASS_INSTANCE:
-                continue
-            
-            world_pos = grass_inst.matrix_world.translation
+        # Export individual grass instances from vertices
+        for idx, vert in enumerate(mesh.vertices):
+            world_pos = batch_obj.matrix_world @ vert.co
             
             # Encode position to 0-65535 range relative to BatchAABB
             range_x = bb_max.x - bb_min.x
@@ -308,33 +317,49 @@ def grass_batches_from_obj(ymap, grass_group_obj):
             inst = GrassInstance()
             inst.position = f"{pos_x} {pos_y} {pos_z}"
             
-            # Get instance properties
-            inst_props = grass_inst.ymap_grass_instance_properties
+            # Get color from attribute (or default)
+            if color_attr:
+                color_data = color_attr.data[idx].color
+                r = int(color_data[0] * 255)
+                g = int(color_data[1] * 255)
+                b = int(color_data[2] * 255)
+            else:
+                # Default green color
+                r, g, b = 102, 178, 51
             
-            # Color (convert from 0-1 to 0-255)
-            r = int(inst_props.color[0] * 255)
-            g = int(inst_props.color[1] * 255)
-            b = int(inst_props.color[2] * 255)
             inst.color = f"{r} {g} {b}"
             
-            # Scale and AO (convert from 0-1 to 0-255)
-            # Use X scale of the object (assuming uniform scale)
-            scale_val = grass_inst.scale.x
-            inst.scale = max(0, min(255, int(scale_val * 255)))
-            inst.ao = int(inst_props.ao * 255)
+            # Get scale from attribute (or default = 1.0 → 255)
+            if scale_attr:
+                scale_val = scale_attr.data[idx].value
+                inst.scale = max(0, min(255, int(scale_val * 255)))
+            else:
+                inst.scale = 255
             
-            # Normal values (calculated from object rotation)
-            # Default "up" vector rotated by object rotation
-            up_vec = Vector((0, 0, 1))
-            up_vec.rotate(grass_inst.rotation_euler)
+            # Get AO from attribute (or default = 1.0 → 255)
+            if ao_attr:
+                ao_val = ao_attr.data[idx].value
+                inst.ao = int(ao_val * 255)
+            else:
+                inst.ao = 255
             
-            # Encode to 0-255
-            # 127 is 0 (flat), 255 is 1.0, 0 is -1.0
-            nx = int(up_vec.x * 127.0 + 127.0)
-            ny = int(up_vec.y * 127.0 + 127.0)
+            # Get rotation from attribute for normal calculation
+            if rotation_attr:
+                rotation_vec = rotation_attr.data[idx].vector
+                # rotation_vec is (0, 0, z_rotation) in radians
+                z_rot = rotation_vec[2]
+            else:
+                z_rot = 0.0
             
-            inst.normal_x = max(0, min(255, nx))
-            inst.normal_y = max(0, min(255, ny))
+            # Calculate normal from rotation
+            # Default "up" vector (0, 0, 1) rotated by Z rotation
+            import math
+            nx = math.sin(z_rot)
+            ny = math.cos(z_rot)
+            
+            # Encode to 0-255 (127 is 0, 255 is 1.0, 0 is -1.0)
+            inst.normal_x = max(0, min(255, int(nx * 127.0 + 127.0)))
+            inst.normal_y = max(0, min(255, int(ny * 127.0 + 127.0)))
             
             # Pad
             inst.pad = "0 0 0"
@@ -346,7 +371,7 @@ def grass_batches_from_obj(ymap, grass_group_obj):
         # Access the underlying list property and append
         grass_list = ymap.instanced_data.__getattribute__("grass_instance_list", False)
         grass_list.value.append(grass_batch)
-        logger.info(f"Exported grass batch '{batch_obj.name}' with {len(grass_batch.instance_list)} instances.")
+        logger.info(f"Exported grass batch '{batch_obj.name}' with {len(grass_batch.instance_list)} instances (from {len(mesh.vertices)} vertices).")
 
 
 def get_lod_level_priority(lod_level_str):
@@ -530,14 +555,13 @@ def ymap_from_object(obj):
                  if model_obj.sollum_type == SollumType.YMAP_MODEL_OCCLUDER:
                       extent_objects.append((model_obj, 0.0))
         
-        # 3. Grass instances
+        # 3. Grass instances - now stored as mesh vertices in batch object
         elif child.sollum_type == SollumType.YMAP_GRASS_GROUP:
             for batch_obj in child.children:
                 if batch_obj.sollum_type == SollumType.YMAP_GRASS_BATCH:
+                    # Grass is now vertices in the batch mesh - just add the batch with its LOD dist
                     lod_dist = batch_obj.ymap_grass_batch_properties.lod_dist
-                    for grass_inst in batch_obj.children:
-                        if grass_inst.sollum_type == SollumType.YMAP_GRASS_INSTANCE:
-                            extent_objects.append((grass_inst, lod_dist))
+                    extent_objects.append((batch_obj, lod_dist))
 
     # Check bounds of all gathered objects
     for obj_ref, lod_dist in extent_objects:

@@ -61,7 +61,6 @@ class SollumType(str, Enum):
     YMAP_CAR_GENERATOR = "sollumz_ymap_car_generator"
     YMAP_GRASS_GROUP = "sollumz_ymap_grass_group"
     YMAP_GRASS_BATCH = "sollumz_ymap_grass_batch"
-    YMAP_GRASS_INSTANCE = "sollumz_ymap_grass_instance"
 
     CHARACTER_CLOTH_MESH = "sollumz_character_cloth_mesh"
 
@@ -271,7 +270,6 @@ YMAP_GROUP_TYPES = [
     SollumType.YMAP_MODEL_OCCLUDER,
     SollumType.YMAP_CAR_GENERATOR,
     SollumType.YMAP_GRASS_BATCH,
-    SollumType.YMAP_GRASS_INSTANCE,
 ]
 
 
@@ -329,7 +327,6 @@ SOLLUMZ_UI_NAMES = {
     SollumType.YMAP_CAR_GENERATOR: "Car Generator",
     SollumType.YMAP_GRASS_GROUP: "Grass Group",
     SollumType.YMAP_GRASS_BATCH: "Grass Batch",
-    SollumType.YMAP_GRASS_INSTANCE: "Grass Instance",
 
     MaterialType.NONE: "None",
     MaterialType.SHADER: "Sollumz Material",

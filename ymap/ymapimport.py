@@ -220,57 +220,12 @@ def cargen_to_obj(obj: bpy.types.Object, ymap: CMapData):
         cargen_obj.parent = group_obj
 
 
-def get_grass_instance_mesh() -> bpy.types.Mesh:
-    """Get or create a grass instance visualization mesh.
-    Creates 8 standing vertical planes randomly positioned within a 0.5 radius area.
-    """
-    import random
-    mesh_name = ".sollumz.grass_instance_mesh"
-    mesh = bpy.data.meshes.get(mesh_name, None)
-    if mesh is None:
-        mesh = bpy.data.meshes.new(mesh_name)
-        
-        # Use fixed seed for consistent grass pattern
-        random.seed(42)
-        
-        verts = []
-        faces = []
-        
-        # Create 8 standing planes in a 0.5 radius area
-        for i in range(8):
-            # Random position within 0.5 radius
-            angle = random.uniform(0, 2 * 3.14159)
-            dist = random.uniform(0, 0.5)
-            cx = dist * math.cos(angle)
-            cy = dist * math.sin(angle)
-            
-            # Random rotation for each grass blade
-            blade_angle = random.uniform(0, 3.14159)
-            
-            # Grass blade size (width and height)
-            half_width = 0.08
-            height = 0.4 + random.uniform(-0.1, 0.1)
-            
-            # Create vertical plane vertices (standing up)
-            dx = half_width * math.cos(blade_angle)
-            dy = half_width * math.sin(blade_angle)
-            
-            base_idx = len(verts)
-            verts.extend([
-                (cx - dx, cy - dy, 0),       # Bottom left
-                (cx + dx, cy + dy, 0),       # Bottom right
-                (cx + dx, cy + dy, height),  # Top right
-                (cx - dx, cy - dy, height),  # Top left
-            ])
-            faces.append((base_idx, base_idx + 1, base_idx + 2, base_idx + 3))
-        
-        mesh.from_pydata(verts, [], faces)
-        mesh.update()
-    return mesh
 
 
 def grass_to_obj(obj: bpy.types.Object, ymap: CMapData):
-    """Import grass instances from ymap"""
+    """Import grass instances from ymap as vertices with attributes"""
+    import bmesh
+    
     # Create the Grass group
     group_obj = bpy.data.objects.new("Grass", None)
     group_obj.sollum_type = SollumType.YMAP_GRASS_GROUP
@@ -282,16 +237,13 @@ def grass_to_obj(obj: bpy.types.Object, ymap: CMapData):
     
     obj.ymap_properties.content_flags_toggle.has_grass = True
     
-    grass_mesh = get_grass_instance_mesh()
-    
     grass_list = ymap.instanced_data.grass_instance_list
     
     for batch_idx, grass_batch in enumerate(grass_list):
-        # Create batch object (empty with properties)
+        # Create batch object with mesh
         batch_name = grass_batch.archetype_name if grass_batch.archetype_name else f"Grass Batch {batch_idx}"
-        batch_obj = bpy.data.objects.new(batch_name, None)
-        batch_obj.empty_display_size = 1.0
-        batch_obj.empty_display_type = 'CUBE'
+        mesh = bpy.data.meshes.new(batch_name)
+        batch_obj = bpy.data.objects.new(batch_name, mesh)
         batch_obj.sollum_type = SollumType.YMAP_GRASS_BATCH
         batch_obj.parent = group_obj
         bpy.context.collection.objects.link(batch_obj)
@@ -315,20 +267,19 @@ def grass_to_obj(obj: bpy.types.Object, ymap: CMapData):
         bb_min = grass_batch.batch_aabb.min
         bb_max = grass_batch.batch_aabb.max
         
-        # Position the batch at the center of its bounding box
-        batch_center = Vector((
-            (bb_min.x + bb_max.x) / 2,
-            (bb_min.y + bb_max.y) / 2,
-            (bb_min.z + bb_max.z) / 2
-        ))
-        batch_obj.location = batch_center
-        
-        # Process individual grass instances
+        # Create mesh with vertices for grass instances
         if grass_batch.instance_list:
+            bm = bmesh.new()
+            
+            # Create attribute layers
+            color_layer = bm.verts.layers.float_color.new("grass_color")
+            scale_layer = bm.verts.layers.float.new("grass_scale")
+            rotation_layer = bm.verts.layers.float_vector.new("grass_rotation")
+            ao_layer = bm.verts.layers.float.new("grass_ao")
+            
             for inst_idx, instance in enumerate(grass_batch.instance_list):
                 # Decode position from packed values (relative to BatchAABB)
-                # Position values are 0-65535 representing range from min to max
-                pos_values = instance.position  # This should be a list of 3 integers
+                pos_values = instance.position
                 
                 if isinstance(pos_values, str):
                     # Parse the space-separated position string
@@ -344,12 +295,9 @@ def grass_to_obj(obj: bpy.types.Object, ymap: CMapData):
                 world_y = bb_min.y + (pos_y / 65535.0) * (bb_max.y - bb_min.y)
                 world_z = bb_min.z + (pos_z / 65535.0) * (bb_max.z - bb_min.z)
                 
-                # Create grass instance object
-                grass_obj = bpy.data.objects.new(f"Grass Instance", grass_mesh)
-                grass_obj.sollum_type = SollumType.YMAP_GRASS_INSTANCE
-                grass_obj.location = Vector((world_x, world_y, world_z))
-                grass_obj.parent = batch_obj
-                bpy.context.collection.objects.link(grass_obj)
+                # Create vertex in local space of batch object
+                local_pos = Vector((world_x, world_y, world_z))
+                vert = bm.verts.new(local_pos)
                 
                 # Parse and set color
                 color_values = instance.color
@@ -363,28 +311,35 @@ def grass_to_obj(obj: bpy.types.Object, ymap: CMapData):
                     g = color_values[1] / 255.0
                     b = color_values[2] / 255.0
                 
-                grass_obj.ymap_grass_instance_properties.color = (r, g, b)
-                # Set viewport display color
-                grass_obj.color = (r, g, b, 1.0)
+                vert[color_layer] = (r, g, b, 1.0)
                 
-                # Set other instance properties
+                # Set scale
                 scale_val = instance.scale / 255.0
-                grass_obj.scale = (scale_val, scale_val, scale_val)
-                grass_obj.ymap_grass_instance_properties.ao = instance.ao / 255.0
+                vert[scale_layer] = scale_val
                 
-                # Apply normals to rotation
-                # Decode normal X/Y (0-255 to -1.0-1.0)
+                # Set AO
+                vert[ao_layer] = instance.ao / 255.0
+                
+                # Decode normals and convert to rotation
                 nx = (instance.normal_x - 127.0) / 127.0
                 ny = (instance.normal_y - 127.0) / 127.0
                 
-                # Calculate Z component (assuming unit vector length 1)
-                # z = sqrt(1 - x^2 - y^2)
-                nz_sq = 1.0 - (nx * nx) - (ny * ny)
-                nz = math.sqrt(nz_sq) if nz_sq > 0 else 0.0
-                
-                # Create normal vector and apply to rotation
-                normal_vec = Vector((nx, ny, nz))
-                grass_obj.rotation_euler = normal_vec.to_track_quat('Z', 'Y').to_euler()
+                # Calculate rotation from normals (Z rotation)
+                z_rotation = math.atan2(nx, ny)
+                vert[rotation_layer] = (0, 0, z_rotation)
+            
+            # Update mesh
+            bm.to_mesh(mesh)
+            bm.free()
+            mesh.update()
+            
+            # Setup Geometry Nodes modifier (same as paint tool creates)
+            from .grass_operators import setup_grass_geometry_nodes
+            setup_grass_geometry_nodes(batch_obj)
+            
+            logger.info(f"Imported grass batch '{batch_name}' with {len(grass_batch.instance_list)} instances (as vertices with Geometry Nodes)")
+
+
 
 
 def ymap_to_obj(ymap: CMapData):

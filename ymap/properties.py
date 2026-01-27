@@ -155,26 +155,6 @@ class YmapGrassBatchProperties(bpy.types.PropertyGroup):
     scale_range: FloatVectorProperty(name="Scale Range", default=(0.3, 0.2, 0.7), size=3)
 
 
-def update_grass_instance_color(self, context):
-    """Sync grass instance color with viewport display color"""
-    obj = context.object
-    if obj is not None:
-        color = self.color
-        obj.color = (color[0], color[1], color[2], 1.0)
-
-
-class YmapGrassInstanceProperties(bpy.types.PropertyGroup):
-    """Properties for an individual grass instance"""
-    color: FloatVectorProperty(
-        name="Color",
-        subtype="COLOR",
-        default=(0.4, 0.7, 0.2),  # Green color
-        min=0.0, max=1.0,
-        size=3,
-        description="Grass instance color (RGB)",
-        update=update_grass_instance_color
-    )
-    ao: FloatProperty(name="Ambient Occlusion", default=1.0, min=0.0, max=1.0, description="Ambient occlusion value (0-1)")
 
 
 class YmapGrassPaintToolProperties(bpy.types.PropertyGroup):
@@ -190,6 +170,11 @@ class YmapGrassPaintToolProperties(bpy.types.PropertyGroup):
     )
     target_object: PointerProperty(type=bpy.types.Object, name="Target Object", description="Object to paint on (leave empty to paint on all visible surfaces)")
     color_variance: FloatProperty(name="Color Variance", default=0.2, min=0.0, max=1.0, description="Random variation in grass color (Hue and Brightness)")
+    use_surface_color: BoolProperty(
+        name="Surface Color",
+        default=False,
+        description="Sample color from the surface texture where grass is painted instead of using the color picker"
+    )
 
 
 def register():
@@ -200,8 +185,6 @@ def register():
         type=YmapCarGeneratorProperties)
     bpy.types.Object.ymap_grass_batch_properties = PointerProperty(
         type=YmapGrassBatchProperties)
-    bpy.types.Object.ymap_grass_instance_properties = PointerProperty(
-        type=YmapGrassInstanceProperties)
     bpy.types.Scene.ymap_grass_paint_tool_properties = PointerProperty(type=YmapGrassPaintToolProperties)
 
 
@@ -210,6 +193,5 @@ def unregister():
     del bpy.types.Object.ymap_model_occl_properties
     del bpy.types.Object.ymap_cargen_properties
     del bpy.types.Object.ymap_grass_batch_properties
-    del bpy.types.Object.ymap_grass_instance_properties
     del bpy.types.Scene.ymap_grass_paint_tool_properties
 

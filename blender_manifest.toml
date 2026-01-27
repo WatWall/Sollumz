@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 id = "sollumz_dev"
 version = "2.8.0-dev+e1f6751"
 name = "Sollumz (Development)"
-tagline = "Grand Theft Auto V modding suite for Blender"
+tagline = "Grand Theft Auto V modding suite for Blender made better with AI implemented features."
 maintainer = "alexguirre <alexguirre.aa@gmail.com>"
 type = "add-on"
 
