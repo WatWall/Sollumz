@@ -262,6 +262,7 @@ def grass_batches_from_obj(ymap, grass_group_obj):
         color_attr = mesh.attributes.get("grass_color")
         scale_attr = mesh.attributes.get("grass_scale")
         rotation_attr = mesh.attributes.get("grass_rotation")
+        normal_attr = mesh.attributes.get("grass_normal")
         ao_attr = mesh.attributes.get("grass_ao")
         
         # Collect all grass instance positions for AABB calculation (in world space)
@@ -344,18 +345,19 @@ def grass_batches_from_obj(ymap, grass_group_obj):
                 inst.ao = 255
             
             # Get rotation from attribute for normal calculation
-            if rotation_attr:
-                rotation_vec = rotation_attr.data[idx].vector
-                # rotation_vec is (0, 0, z_rotation) in radians
-                z_rot = rotation_vec[2]
+            # Calculate normal
+            if normal_attr:
+                local_n = normal_attr.data[idx].vector
+                # Transform to world space
+                world_n = batch_obj.matrix_world.to_3x3() @ local_n
+                world_n.normalize()
+                nx = world_n.x
+                ny = world_n.y
             else:
-                z_rot = 0.0
-            
-            # Calculate normal from rotation
-            # Default "up" vector (0, 0, 1) rotated by Z rotation
-            import math
-            nx = math.sin(z_rot)
-            ny = math.cos(z_rot)
+                # Default to Up vector (0, 0, 1)
+                # This results in NormalX=127, NormalY=127 which is "flat"
+                nx = 0.0
+                ny = 0.0
             
             # Encode to 0-255 (127 is 0, 255 is 1.0, 0 is -1.0)
             inst.normal_x = max(0, min(255, int(nx * 127.0 + 127.0)))

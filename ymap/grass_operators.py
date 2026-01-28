@@ -289,6 +289,8 @@ def ensure_grass_mesh_attributes(batch_obj):
         mesh.attributes.new(name="grass_rotation", type='FLOAT_VECTOR', domain='POINT')
     if "grass_ao" not in mesh.attributes:
         mesh.attributes.new(name="grass_ao", type='FLOAT', domain='POINT')
+    if "grass_normal" not in mesh.attributes:
+        mesh.attributes.new(name="grass_normal", type='FLOAT_VECTOR', domain='POINT')
 
 
 class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
@@ -687,6 +689,10 @@ class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
         ao_layer = bm.verts.layers.float.get("grass_ao")
         if ao_layer is None:
             ao_layer = bm.verts.layers.float.new("grass_ao")
+
+        normal_layer = bm.verts.layers.float_vector.get("grass_normal")
+        if normal_layer is None:
+            normal_layer = bm.verts.layers.float_vector.new("grass_normal")
         
         # Pre-generate random values
         angles = [random.uniform(0, 2 * math.pi) for _ in range(count)]
@@ -735,6 +741,12 @@ class SOLLUMZ_OT_paint_grass(bpy.types.Operator):
                 vert[scale_layer] = scales[i]
                 vert[rotation_layer] = (0, 0, z_rotations[i])
                 vert[ao_layer] = 1.0
+                
+                # Set normal (transform to local space)
+                # We need to transform the normal direction, so we use the rotation part of the matrix (inverse)
+                local_normal = self._batch_obj.matrix_world.inverted().to_3x3() @ hit_normal
+                local_normal.normalize()
+                vert[normal_layer] = local_normal
         
         # Update mesh
         bm.to_mesh(mesh)
