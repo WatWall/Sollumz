@@ -217,6 +217,10 @@ class SOLLUMZ_PT_MLO_ENTITY_PANEL(MloEntityChildTabPanel, bpy.types.Panel):
         for prop_name in EntityProperties.__annotations__:
             if prop_name == "flags":
                 continue
+            # Skip properties that are not part of the multiselect properties
+            # (e.g., flags_toggle, parent_entity are not supported for multiselect)
+            if not hasattr(selection.propnames, prop_name):
+                continue
             layout.prop(selection.owner, getattr(selection.propnames, prop_name))
 
 
