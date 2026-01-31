@@ -98,8 +98,10 @@ class SOLLUMZ_PT_YMAP_TOOL_PANEL(bpy.types.Panel):
                 layout.operator("sollumz.create_box_occluder_group")
                 layout.operator("sollumz.create_car_generator_group")
                 layout.operator("sollumz.create_grass_group")
-                layout.separator()
-                layout.operator("sollumz.convert_to_ymap_entity", text="Update Entity Types", icon="FILE_REFRESH")
+            elif active_object.sollum_type == SollumType.YMAP_ENTITY_GROUP:
+                layout.label(text="Entity Group Options")
+                row = layout.row()
+                row.operator("sollumz.convert_to_ymap_entity", text="Update Entity Types", icon="FILE_REFRESH")
             elif active_object.sollum_type == SollumType.YMAP_BOX_OCCLUDER_GROUP:
                 layout.label(text="Box Occluders Options")
                 row = layout.row()
