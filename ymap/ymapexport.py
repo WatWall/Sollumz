@@ -139,10 +139,10 @@ def calculate_num_children(entity_obj, ymap_obj, entity_idx):
 
 def entity_from_obj(obj, parent_index_map=None, current_ymap_entities=None, ymap_obj=None, obj_index=None):
     # Removing " (not found)" suffix, created when importing ymaps while entity was not found in the view layer
-    obj.name = re.sub(" \(not found\)", "", obj.name.lower())
+    entity_name = re.sub(r" \(not found\)", "", obj.name.lower())
 
     entity = Entity()
-    entity.archetype_name = remove_number_suffix(obj.name)
+    entity.archetype_name = remove_number_suffix(entity_name)
     entity.flags = int(obj.entity_properties.flags)
     entity.guid = int(obj.entity_properties.guid)
     entity.position = obj.location

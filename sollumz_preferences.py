@@ -22,7 +22,6 @@ from bpy.props import (
 from bpy_extras.io_utils import ImportHelper
 import rna_keymap_ui
 import os
-import sys
 import ast
 import textwrap
 from typing import Optional, Any, TYPE_CHECKING
@@ -260,21 +259,57 @@ class ImportSettingsBase:
         update=_on_update_thunk,
     )
 
+    textures_mode: EnumProperty(
+        name="Textures Mode",
+        description="How to handle textures during import",
+        items=(
+            ("PACK", "Pack into Blend File (default)", "Pack textures into the .blend file (recommended)"),
+            ("IMPORT_DIR", "Extract to Import Directory", "Extract textures to a directory next to the imported file"),
+            ("CUSTOM_DIR", "Extract to Custom Directory", "Extract textures to a custom directory specified below"),
+        ),
+        default="PACK",
+        update=_on_update_thunk,
+    )
+
+    textures_extract_custom_directory: StringProperty(
+        name="Custom Textures Directory",
+        description=(
+            "Custom directory for extracting textures. If not set, the import directory will be used as fallback."
+        ),
+        subtype="DIR_PATH",
+        default="",
+        update=_on_update_thunk,
+    )
+
     def to_import_context_settings(self) -> "ImportSettings":
-        from .iecontext import ImportSettings
+        from .iecontext import ImportSettings, ImportTexturesMode
+
+        textures_mode = ImportTexturesMode[self.textures_mode]
+        textures_extract_custom_dir=(
+            Path(bpy.path.abspath(self.textures_extract_custom_directory))
+            if self.textures_extract_custom_directory
+            else None
+        )
+        if textures_mode == ImportTexturesMode.CUSTOM_DIR and not textures_extract_custom_dir:
+            # If there is no custom directory set, fallback to the import directory.
+            textures_mode = ImportTexturesMode.IMPORT_DIR
+
         return ImportSettings(
             import_as_asset=self.import_as_asset,
             split_by_group=self.split_by_group,
             mlo_instance_entities=self.ytyp_mlo_instance_entities,
             import_external_skeleton=self.import_ext_skeleton,
             frag_import_vehicle_windows=self.frag_import_vehicle_windows,
+            textures_mode=textures_mode,
+            textures_extract_custom_directory=textures_extract_custom_dir,
         )
 
 
 class SollumzExportSettings(ExportSettingsBase, PropertyGroup):
     def _on_update(self, context):
         # Make sure there is always something selected in the target format/version
-        if not self.target_formats:
+        from szio.gta5 import is_provider_available, AssetFormat
+        if not self.target_formats or (not is_provider_available(AssetFormat.NATIVE) and "CWXML" not in self.target_formats):
             self.target_formats = {"CWXML"}
             return # the assignment above will trigger this callback again
 
@@ -889,6 +924,19 @@ class SollumzAddonPreferences(AddonPreferences):
         box.label(text="Import", icon="IMPORT")
         settings = self.import_settings
         box.prop(settings, "import_as_asset")
+
+        _section_header(box, text="Textures")
+        col = box.column(align=True)
+        col.prop(settings, "textures_mode", text="Mode")
+        if settings.textures_mode == "CUSTOM_DIR":
+            split = col.split(factor=0.4)
+            row = split.row()
+            if not settings.textures_extract_custom_directory:
+                row.alignment = "RIGHT"
+                row.alert = True
+                row.label(icon="ERROR", text="No directory set")
+            split.row().prop(settings, "textures_extract_custom_directory", text="")
+
         _section_header(box, text="Fragment")
         box.prop(settings, "split_by_group")
         box.prop(settings, "frag_import_vehicle_windows")
